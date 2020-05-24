@@ -18,3 +18,5 @@ docker/mac-receiver
 mac/docker-connector
 mac/docker-connector-*.tar.gz
 mac/options.conf
+mac/docker-connector-mac-sha256.txt
+.DS_Store

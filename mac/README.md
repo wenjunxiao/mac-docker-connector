@@ -2,17 +2,33 @@
 
   Connect to mac-receiver in docker, and route container's ip to it.
 
+## Install
+
+  You can install from [brew](https://github.com/wenjunxiao/homebrew-brew)
+```bash
+$ brew install wenjunxiao/brew/docker-connector
+```
+  Or download the latest version directly from [release](https://github.com/wenjunxiao/mac-docker-connector/releases)
+```bash
+# change the version to latest version
+$ curl -sSL -o- https://github.com/wenjunxiao/mac-docker-connector/releases/download/v1.0/docker-connector-mac.tar.gz | tar -zxf - -C /usr/local/bin/
+```
+
 ## Usage
 
+  If install by brew, just start as a service.
+```bash
+$ sudo brew services start docker-connector
+```
   Add routes which container subnets you want to access for the first time,
   and you can add or delete later.
   You can add all bridge subnet by `docker network ls --filter driver=bridge`
 ```bash
-$ docker network ls --filter driver=bridge --format "{{.ID}}" | xargs docker network inspect --format "route {{range .IPAM.Config}}{{.Subnet}}{{end}}" >> options.conf
+$ docker network ls --filter driver=bridge --format "{{.ID}}" | xargs docker network inspect --format "route {{range .IPAM.Config}}{{.Subnet}}{{end}}" >> /usr/local/etc/docker-connector.conf
 ```
   Or just add specified subnet route you like
 ```bash
-$ cat <<EOF >> options.conf
+$ cat <<EOF >> /usr/local/etc/docker-connector.conf
 route 172.100.0.0/16
 EOF
 ```
@@ -20,7 +36,7 @@ EOF
   Start with the specified configuration file
 ```bash
 $ sudo ls # cache sudo password
-$ nohup sudo ./docker-connector -config options.conf &
+$ nohup sudo ./docker-connector -config /usr/local/etc/docker-connector.conf &
 ```
 
 ## Compile
@@ -28,4 +44,63 @@ $ nohup sudo ./docker-connector -config options.conf &
 ```bash
 $ go env -w GOPROXY=https://goproxy.cn,direct
 $ go build -tags netgo -o docker-connector main.go
+```
+
+## Publish
+
+  Publish this to [Homebrew](https://brew.sh/) for easy installation.
+
+### Release
+
+  Build and make a tarball
+```bash
+$ go build -tags netgo -o docker-connector main.go
+$ tar -czf docker-connector-mac.tar.gz docker-connector
+$ shasum -a 256 docker-connector-mac.tar.gz | awk '{print $1}' > docker-connector-mac-sha256.txt
+```
+  Upload the tarball to [Releases](https://github.com/wenjunxiao/mac-docker-connector/releases)
+
+### Homebrew
+
+  Create a ruby repository named `homebrew-brew`, which must start with `homebrew-`.
+  Clone it and add formula named [docker-connector.rb](https://github.com/wenjunxiao/homebrew-brew/blob/master/Formula/docker-connector.rb) in `Formula` 
+```bash
+$ git clone https://github.com/wenjunxiao/homebrew-brew
+$ cd homebrew-brew
+$ mkdir Formula && cd Formula
+$ cat <<EOF > docker-connector.rb
+class DockerConnector < Formula
+  url https://github.com/wenjunxiao/mac-docker-connector/releases/download/x.x.x/docker-connector-mac.tar.gz
+  sha256 ...
+  version ...
+  def install
+    bin.install "docker-connector"
+  end
+  def plist
+    <<~EOS
+      ...
+    EOS
+  end
+end
+EOF
+$ cd ../
+$ git add . && git commit -m "..."
+$ git push origin master
+```
+  You can install by brew.
+```bash
+$ brew install wenjunxiao/brew/docker-connector
+```
+  In addition to github, it can be stored in other warehouses,
+  and other protocols can also be used. Such as [gitee.com](https://gitee.com/wenjunxiao/homebrew-brew).
+  You need to specify the full path when installing
+```bash
+$ brew tap wenjunxiao/brew https://gitee.com/wenjunxiao/homebrew-brew
+$ brew install docker-connector
+```
+  If it has already been tapped, you can change remote 
+```bash
+$ cd `brew --repo`/Library/Taps/wenjunxiao/homebrew-brew
+$ git remote set-url origin https://gitee.com/wenjunxiao/homebrew-brew.git
+$ brew install docker-connector
 ```

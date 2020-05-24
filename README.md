@@ -37,3 +37,31 @@
 +------------+          +-----------------+
 ```
 
+## Usage
+
+  Install mac client of mac-docker-connector.
+```bash
+$ brew tap wenjunxiao/docker-connector
+$ brew install docker-connector
+```
+
+  Config route of docker network
+```bash
+$ docker network ls --filter driver=bridge --format "{{.ID}}" | xargs docker network inspect --format "route {{range .IPAM.Config}}{{.Subnet}}{{end}}" >> /usr/local/etc/docker-connector.conf
+```
+
+  Start the service
+```bash
+$ sudo brew services start docker-connector
+```
+
+  Install docker front of mac-docker-connector
+```bash
+$ docker pull origin wenjunxiao/mac-docker-connector
+```
+
+  Start the docker front. The network must be host, and add `NET_ADMIN` capability.
+
+```bash
+$ docker run -it -d --restart always --net host --cap-add NET_ADMIN --name connector mac-docker-connector
+```
