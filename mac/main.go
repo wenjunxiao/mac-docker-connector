@@ -135,6 +135,7 @@ func main() {
 	}
 	logger.Infof("interface => %s\n", iface.Name())
 	if _, err := os.Stat(configFile); err == nil {
+		logger.Infof("load config(%v) => %s\n", watch, configFile)
 		loadConfig(iface, true)
 		if watch {
 			watcher, err := fsnotify.NewWatcher()
@@ -152,6 +153,15 @@ func main() {
 						if event.Op&fsnotify.Write == fsnotify.Write {
 							logger.Debugf("config file changed => %s\n", configFile)
 							loadConfig(iface, false)
+						} else if event.Op&fsnotify.Rename == fsnotify.Rename {
+							logger.Debugf("config file renamed => %s\n", event.Name)
+							loadConfig(iface, false)
+							if err = watcher.Remove(configFile); err != nil {
+								logger.Warningf("remove watch error => %v\n", err)
+							}
+							if err = watcher.Add(event.Name); err != nil {
+								logger.Warningf("watch error => %v\n", err)
+							}
 						}
 					case err, ok := <-watcher.Errors:
 						if !ok {
@@ -167,6 +177,8 @@ func main() {
 				} else {
 					logger.Debugf("watch config => %s\n", configFile)
 				}
+			} else {
+				logger.Warningf("watch error => %v\n", err)
 			}
 		}
 	} else {
