@@ -22,8 +22,7 @@ $ brew install wenjunxiao/brew/docker-accessor
 
   Download `docker-accessor` from [Releases](https://github.com/wenjunxiao/mac-docker-connector/releases)
 ```bash
-$ curl -O https://github.com/wenjunxiao/mac-docker-connector/releases/download/v1.1/docker-accessor.tar.gz
-$ tar -xzf docker-accessor.tar.gz -C /usr/local/bin
+$ curl -L -o- https://github.com/wenjunxiao/mac-docker-connector/releases/download/v2.0/docker-accessor-linux.tar.gz | tar -xzf - -C /usr/local/bin
 ```
 
 ## Usage
