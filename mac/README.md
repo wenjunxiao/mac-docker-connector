@@ -1,6 +1,7 @@
 # docker-connector
 
-  Connect to mac-receiver in docker, and route container's ip to it.
+  Accept connection from [mac-receiver](../docker) in docker, and route container's ip to it.
+  Also can expose the access capabilities of Docker containers to others who use [docker-accessor](../accessor)
 
 ## Install
 
@@ -37,6 +38,29 @@ EOF
 ```bash
 $ sudo ls # cache sudo password
 $ nohup sudo ./docker-connector -config /usr/local/etc/docker-connector.conf &
+```
+
+### Expose access
+
+  You can expose the containers to others, so that they can access the network you built in docker.
+  Add expose listen address and access tokens.
+```bash
+$ cat <<EOF >> /usr/local/etc/docker-connector.conf
+expose 0.0.0.0:2512
+token user1 192.168.251.3
+token user2 192.168.251.4
+EOF
+```
+  And append `expose` the route which you want to expose to others.
+```conf
+route 172.100.0.0/16 expose
+```
+
+  For test, you can turn on `pong` to intercept ping requests(only IPv4)
+```bash
+$ cat <<EOF >> /usr/local/etc/docker-connector.conf
+pong on
+EOF
 ```
 
 ## Compile

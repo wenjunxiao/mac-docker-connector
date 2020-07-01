@@ -65,3 +65,5 @@ $ docker pull origin wenjunxiao/mac-docker-connector
 ```bash
 $ docker run -it -d --restart always --net host --cap-add NET_ADMIN --name connector mac-docker-connector
 ```
+
+  If you want to expose the containers of docker to other pepole, Please reference [docker-accessor](./accessor)

@@ -1,6 +1,6 @@
 # mac-receiver
 
-  Accept macOS connection request and route it to the container correctly.
+  Connect to `docker-connector` in macOS and route the request from macOS to the container correctly.
 
 ## Usage
 
@@ -24,7 +24,19 @@ $ GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -tags netgo -o mac-receiver 
 
 ## Dev
 
+  Build dev docker image
 ```bash
-$ go mod init main
-$ go env -w GOPROXY=https://goproxy.cn,direct
+$ docker run -it --name centos-go centos:7 bash
+> yum install -y epel-release
+> yum install go net-tools tcpdump initscripts
+> go env -w GOPROXY=https://goproxy.cn,direct
+$ docker commit centos-go centos-go
+```
+
+  Run with the dev image
+```bash
+$ docker run -it --cap-add NET_ADMIN -v $PWD:/workspace --workdir /workspace centos-go bash
+> # go mod init main
+> go env -w GOPROXY=https://goproxy.cn,direct
+> go build -ldflags "-s -w" -tags netgo -o mac-receiver main.go
 ```
