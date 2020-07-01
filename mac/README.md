@@ -79,8 +79,8 @@ $ go build -tags netgo -o docker-connector main.go
   Build and make a tarball
 ```bash
 $ go build -tags netgo -o docker-connector main.go
-$ tar -czf docker-connector-mac.tar.gz docker-connector
-$ shasum -a 256 docker-connector-mac.tar.gz | awk '{print $1}' > docker-connector-mac-sha256.txt
+$ tar -czf docker-connector-darwin.tar.gz docker-connector
+$ shasum -a 256 docker-connector-darwin.tar.gz | awk '{print $1}' > docker-connector-darwin-sha256.txt
 ```
   Upload the tarball to [Releases](https://github.com/wenjunxiao/mac-docker-connector/releases)
 

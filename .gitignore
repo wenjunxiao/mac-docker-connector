@@ -18,7 +18,7 @@ docker/mac-receiver
 mac/docker-connector
 mac/docker-connector-*.tar.gz
 mac/options.conf
-mac/docker-connector-mac-sha256.txt
+mac/docker-connector-*-sha256.txt
 accessor/build
 accessor/docker-accessor
 accessor/docker-accessor*.tar.gz
