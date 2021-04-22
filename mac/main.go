@@ -343,6 +343,10 @@ func main() {
 			logger.Fatal(err)
 		}
 	}
+	args := fmt.Sprintf("route -n add -host %s -interface %s", localIP, iface.Name())
+	if err = runCmd(args); err != nil {
+		logger.Warning(err)
+	}
 	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		logger.Fatalf("invalid address => %s:%d", host, port)
@@ -366,6 +370,12 @@ func main() {
 			n, err := iface.Read(buf)
 			if err != nil {
 				logger.Warningf("tap read error: %v\n", err)
+				continue
+			}
+			if localIP[0] == buf[16] && localIP[1] == buf[17] && localIP[2] == buf[18] && localIP[3] == buf[19] {
+				if _, err := iface.Write(buf[:n]); err != nil {
+					logger.Warningf("local write error: %v\n", err)
+				}
 				continue
 			}
 			if _, err := conn.WriteToUDP(buf[:n], cli); err != nil {
