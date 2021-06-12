@@ -5,7 +5,7 @@
 ## Usage
 
 ```bash
-$ docker run -it -d --net host --cap-add NET_ADMIN --name mac-receiver mac-docker-connector
+$ docker run -it -d --net host --cap-add NET_ADMIN --restart always --name mac-connector wenjunxiao/mac-docker-connector
 ```
 
 ## Compile
@@ -39,6 +39,7 @@ $ docker run -it --cap-add NET_ADMIN -v $PWD:/workspace --workdir /workspace cen
 > # go mod init main
 > go env -w GOPROXY=https://goproxy.cn,direct
 > go build -ldflags "-s -w" -tags netgo -o mac-receiver main.go
+> go run main.go -port 2521 -addr 192.168.252.1/24
 ```
 
 ## Multi-Platform

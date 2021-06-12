@@ -128,3 +128,14 @@ $ cd `brew --repo`/Library/Taps/wenjunxiao/homebrew-brew
 $ git remote set-url origin https://gitee.com/wenjunxiao/homebrew-brew.git
 $ brew install docker-connector
 ```
+
+## Dev
+
+  Run `main.go` without default config in debug mode.
+```bash
+$ sudo go run main.go -port 2521 -addr 192.168.252.1/24 -cli false
+```
+
+## References
+
+* [Internet Protocol](https://www.ietf.org/rfc/rfc791)

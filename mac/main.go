@@ -39,23 +39,26 @@ var (
 	watch      = true
 	routes     = make(map[string]bool)
 	tokens     = make(map[string]string)
+	iptables   = make(map[string]bool)
 	logLevel   = "INFO"
 	sessions   = make(map[uint64]*net.UDPAddr)
 	localIP    = net.IP(make([]byte, 4))
 	pong       = false
+	cliAddr    = ""
 )
 
 func init() {
 	logging.SetLevel(logging.INFO, "vpn")
 	logger = logging.MustGetLogger("vpn")
 	flag.IntVar(&MTU, "mtu", MTU, "mtu")
-	flag.StringVar(&host, "host", host, "udp host")
-	flag.IntVar(&port, "port", port, "udp port")
-	flag.StringVar(&addr, "addr", addr, "address")
+	flag.StringVar(&host, "host", host, "udp listen host")
+	flag.IntVar(&port, "port", port, "udp listen port")
+	flag.StringVar(&addr, "addr", addr, "virtual network address")
 	flag.StringVar(&configFile, "config", configFile, "config file")
 	flag.BoolVar(&watch, "watch", watch, "watch config file")
 	flag.StringVar(&logLevel, "log-level", logLevel, "log level")
 	flag.BoolVar(&pong, "pong", pong, "pong")
+	flag.StringVar(&cliAddr, "cli", cliAddr, "udp client address")
 }
 
 func runCmd(args string) error {
@@ -94,7 +97,11 @@ func handleExpose() {
 	for {
 		n, addr, err := expose.ReadFromUDP(data)
 		if err != nil {
-			logger.Warning("failed read udp msg, error: " + err.Error())
+			if strings.Contains(err.Error(), "closed") {
+				logger.Info("expose server closed.")
+				return
+			}
+			logger.Warningf("failed read udp msg, error: %v\n", err)
 			continue
 		}
 		if users[addr.String()] {
@@ -163,6 +170,20 @@ func handleExpose() {
 	}
 }
 
+func normalizeAddr(addr string) string {
+	if strings.Index(addr, "[::]") == 0 {
+		return strings.Replace(addr, "[::]", "0.0.0.0", 1)
+	}
+	return addr
+}
+
+func isSameAddr(addr0, addr1 string) bool {
+	if addr0 == addr1 {
+		return true
+	}
+	return normalizeAddr(addr0) == normalizeAddr(addr1)
+}
+
 func loadConfig(iface *water.Interface, init bool) {
 	fi, err := os.Open(configFile)
 	if err != nil {
@@ -172,6 +193,7 @@ func loadConfig(iface *water.Interface, init bool) {
 	re := regexp.MustCompile(`^\s*(\w+\S+)(?:\s+(.*))?$`)
 	news := make(map[string]bool)
 	news1 := make(map[string]string)
+	iptables1 := make(map[string]bool)
 	br := bufio.NewReader(fi)
 	for {
 		a, _, c := br.ReadLine()
@@ -205,8 +227,11 @@ func loadConfig(iface *water.Interface, init bool) {
 			case "pong":
 				pong = val == "on" || val == "true"
 			case "expose":
+				restart := strings.Contains(val, "restart")
+				val = strings.Fields(val)[0]
 				if udpAddr, err := net.ResolveUDPAddr("udp", val); err == nil {
-					if expose != nil && expose.LocalAddr().String() != val {
+					if expose != nil && (restart || !isSameAddr(expose.LocalAddr().String(), val)) {
+						logger.Infof("expose changed: %s => %s\n", expose.LocalAddr().String(), val)
 						expose.Close()
 						expose = nil
 					}
@@ -223,6 +248,18 @@ func loadConfig(iface *water.Interface, init bool) {
 			case "token":
 				vals := strings.Split(val, " ")
 				news1[vals[0]] = vals[1]
+			case "iptables":
+				vals := strings.Split(val, "+")
+				join := true
+				if len(vals) == 1 {
+					vals = strings.Split(val, "-")
+					join = false
+				}
+				val = fmt.Sprintf("%s %s", vals[0], vals[1])
+				if vals[0] > vals[1] {
+					val = fmt.Sprintf("%s %s", vals[1], vals[0])
+				}
+				iptables1[val] = join
 			}
 		}
 	}
@@ -235,6 +272,9 @@ func loadConfig(iface *water.Interface, init bool) {
 		args := fmt.Sprintf("%s %s inet %s %s netmask 255.255.255.255 up", "ifconfig", iface.Name(), localIP, peer)
 		if err = runCmd(args); err != nil {
 			logger.Fatal(err)
+		}
+		for k, v := range iptables1 {
+			iptables[k] = v
 		}
 	}
 	for key := range routes {
@@ -264,12 +304,66 @@ func loadConfig(iface *water.Interface, init bool) {
 	for key := range news1 {
 		tokens[key] = news1[key]
 	}
+	for key := range iptables {
+		if v, ok := iptables1[key]; ok {
+			if iptables[key] == v {
+				delete(iptables1, key)
+			} else {
+				iptables[key] = v
+			}
+		} else {
+			delete(iptables, key)
+			iptables1[key] = false
+		}
+	}
+	if cli != nil && len(iptables1) > 0 {
+		sendIptable(cli, iptables1)
+	}
 	news = nil
 	news1 = nil
+	iptables1 = nil
 }
 
 func packetIP(data []byte) net.IP {
 	return net.IPv4(data[16], data[17], data[18], data[19])
+}
+
+func sendIptable(cli *net.UDPAddr, tables map[string]bool) {
+	logger.Infof("send iptables => %v %v\n", cli, tables)
+	var reply bytes.Buffer
+	for k, v := range tables {
+		if reply.Len() > 0 {
+			reply.WriteString(",")
+		}
+		if v {
+			reply.WriteString("connect ")
+		} else {
+			reply.WriteString("disconnect ")
+		}
+		reply.WriteString(k)
+	}
+	l := reply.Len()
+	if l > 0 {
+		if l < 50 {
+			logger.Infof("reply client => %s %d %s\n", cli, l, reply.String())
+		} else {
+			logger.Infof("reply client => %s %d\n", cli, l)
+		}
+		l16 := uint16(l)
+		header := make([]byte, 3)
+		header[0] = 1
+		header[1] = byte(l16 >> 8)
+		header[2] = byte(l16 & 0x00ff)
+		if _, err := conn.WriteToUDP(header, cli); err != nil {
+			logger.Warningf("write header error: %v %v\n", header, err)
+		}
+		tmp := reply.Bytes()
+		for i := 0; i < l; i += MTU {
+			if _, err := conn.WriteToUDP(tmp[i:min(i+MTU, l)], cli); err != nil {
+				logger.Warningf("write body error: %v %v\n", l, err)
+			}
+		}
+	}
 }
 
 func main() {
@@ -359,9 +453,15 @@ func main() {
 	}
 	defer conn.Close()
 	logger.Infof("listen => %v\n", conn.LocalAddr())
-	if tmp, err := ioutil.ReadFile(TmpPeer); err == nil {
-		if cli, err = net.ResolveUDPAddr("udp", string(tmp)); err == nil {
-			logger.Infof("load peer => %v\n", cli)
+	if cliAddr == "" {
+		if tmp, err := ioutil.ReadFile(TmpPeer); err == nil {
+			if cli, err = net.ResolveUDPAddr("udp", string(tmp)); err == nil {
+				logger.Infof("load peer => %v\n", cli)
+			}
+		}
+	} else {
+		if cli, err = net.ResolveUDPAddr("udp", cliAddr); err == nil {
+			logger.Infof("set peer => %v\n", cli)
 		}
 	}
 	go func() {
@@ -384,6 +484,7 @@ func main() {
 			}
 		}
 	}()
+	var lastCli string
 	var n int
 	data := make([]byte, 2000)
 	for {
@@ -399,14 +500,33 @@ func main() {
 		} else {
 			if _, err := iface.Write(data[:n]); err != nil {
 				if data[0] == 0 && n == 1 {
-					logger.Debugf("client init => %v\n", cli)
-					ioutil.WriteFile(TmpPeer, []byte(cli.String()), 0644)
+					if lastCli == cli.String() {
+						logger.Debugf("client heartbeat => %v\n", cli)
+					} else {
+						if lastCli == "" {
+							logger.Infof("client init => %v\n", cli)
+						} else {
+							logger.Infof("client change => %v\n", cli)
+						}
+						lastCli = cli.String()
+						if cliAddr == "" {
+							ioutil.WriteFile(TmpPeer, []byte(lastCli), 0644)
+						}
+						sendIptable(cli, iptables)
+					}
 				} else {
 					logger.Warningf("tun write error: %d %v %v\n", n, data[:n], err)
 				}
 			}
 		}
 	}
+}
+
+func min(a int, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func toIntIP(packet []byte, offset0 int, offset1 int, offset2 int, offset3 int) (sum uint64) {

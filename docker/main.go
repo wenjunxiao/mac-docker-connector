@@ -14,21 +14,94 @@ import (
 
 var (
 	// MTU maximum transmission unit
-	MTU       = 1400
-	debug     = false
-	host      = "host.docker.internal"
-	port      = 2511
-	addr      = "192.168.251.1/24"
-	heartbeat = 5000
+	MTU               = 1400
+	debug             = false
+	host              = "host.docker.internal"
+	port              = 2511
+	addr              = "192.168.251.1/24"
+	heartbeat         = 5000
+	iptablesInstalled = false
+	chain             = "DOCKER-USER"
 )
 
 func init() {
 	flag.BoolVar(&debug, "debug", debug, "Provide debug info")
-	flag.IntVar(&MTU, "mtu", MTU, "Provide debug info")
-	flag.StringVar(&host, "host", host, "host listen")
-	flag.IntVar(&port, "port", port, "port listen")
-	flag.StringVar(&addr, "addr", addr, "address")
+	flag.IntVar(&MTU, "mtu", MTU, "network MTU")
+	flag.StringVar(&host, "host", host, "host to connect")
+	flag.IntVar(&port, "port", port, "port to connect")
+	flag.StringVar(&addr, "addr", addr, "virtual network address")
+	flag.StringVar(&chain, "chain", chain, "iptables chain name")
 	flag.IntVar(&heartbeat, "heartbeat", heartbeat, "heartbeat")
+}
+
+func runCmd(args string) string {
+	argv := strings.Split(args, " ")
+	cmd := exec.Command(argv[0], argv[1:]...)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		return string(out)
+	}
+	fmt.Printf("command error => %s %v\n", args, err)
+	return ""
+}
+
+func getRoutes() map[string]string {
+	routes := make(map[string]string)
+	lines := strings.Split(runCmd("route -n"), "\n")
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) > 2 {
+			routes[fields[0]] = fields[len(fields)-1]
+		}
+	}
+	return routes
+}
+
+func installIptables() {
+	// iptables -L DOCKER-USER -vn --line-number
+	if exec.Command("iptables", "-L", chain, "-vn", "--line-number").Run() != nil {
+		fmt.Printf("iptables installing...\n")
+		if err := exec.Command("apk", "add", "iptables").Run(); err != nil {
+			fmt.Printf("iptables install failed => %v\n", err)
+		} else {
+			fmt.Printf("iptables installed\n")
+		}
+	}
+}
+func iptables(a, i, o string) error {
+	if !iptablesInstalled {
+		installIptables()
+		iptablesInstalled = true
+	}
+	fmt.Printf("iptables %s %s -i %s -o %s\n", a, chain, i, o)
+	cmd := exec.Command("iptables", a, chain, "-i", i, "-o", o, "-j", "ACCEPT")
+	return cmd.Run()
+}
+
+func applyControls(cmds []string) {
+	routes := getRoutes()
+	for _, val := range cmds {
+		vals := strings.Split(val, " ")
+		fmt.Printf("control => %s\n", val)
+		switch vals[0] {
+		case "connect":
+			i1 := routes[vals[1]]
+			i2 := routes[vals[2]]
+			if len(i1) > 0 && len(i2) > 0 {
+				if iptables("-C", i1, i2) != nil {
+					iptables("-I", i1, i2)
+					iptables("-I", i2, i1)
+				}
+			}
+		case "disconnect":
+			i1 := routes[vals[1]]
+			i2 := routes[vals[2]]
+			if len(i1) > 0 && len(i2) > 0 {
+				iptables("-D", i1, i2)
+				iptables("-D", i2, i1)
+			}
+		}
+	}
 }
 
 func main() {
@@ -66,7 +139,7 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	ip, subnet, err := net.ParseCIDR(addr)
+	ip, subnet, _ := net.ParseCIDR(addr)
 	peer := net.IP(make([]byte, 4))
 	copy([]byte(peer), []byte(ip.To4()))
 	peer[3]++
@@ -84,6 +157,10 @@ func main() {
 	argv = strings.Split(args, " ")
 	cmd = exec.Command(argv[0], argv[1:]...)
 	err = cmd.Run()
+	if err != nil {
+		fmt.Printf("invalid command => %s\n", args)
+		os.Exit(1)
+	}
 	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		fmt.Printf("invalid address => %s:%d\n", host, port)
@@ -131,7 +208,27 @@ func main() {
 			fmt.Println("failed read udp msg, error: " + err.Error())
 		}
 		if _, err := iface.Write(data[:n]); err != nil {
-			fmt.Printf("tun write error: %v\n", err)
+			if data[0] == 1 {
+				var l int = 0
+				l += int(data[1]) << 8
+				l += int(data[2])
+				var buf = make([]byte, l)
+				var pos = n - 3
+				copy(buf, data[3:n])
+				for pos < l {
+					if n, err = conn.Read(data); err != nil {
+						fmt.Println("failed read udp msg, error: " + err.Error())
+						break
+					}
+					copy(buf[pos:], data[:n])
+					pos += n
+				}
+				if l > 0 {
+					applyControls(strings.Split(string(buf), ","))
+				}
+			} else {
+				fmt.Printf("tun write error: %v\n", err)
+			}
 		}
 		requested <- true
 	}
