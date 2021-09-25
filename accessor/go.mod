@@ -1,4 +1,4 @@
-module main
+module docker-accesor
 
 go 1.13
 

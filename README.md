@@ -69,7 +69,7 @@ $ sudo brew services start docker-connector
 
   Install docker front of `mac-docker-connector`
 ```bash
-$ docker pull origin wenjunxiao/mac-docker-connector
+$ docker pull wenjunxiao/mac-docker-connector
 ```
 
   Start the docker front. The network must be `host`, and add `NET_ADMIN` capability.

@@ -1,0 +1,5 @@
+{
+  "gopls": {
+    "experimentalWorkspaceModule": true
+  }
+}

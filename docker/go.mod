@@ -1,4 +1,4 @@
-module main
+module mac-receiver
 
 go 1.13
 

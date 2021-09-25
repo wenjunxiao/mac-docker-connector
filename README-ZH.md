@@ -65,12 +65,12 @@ $ sudo brew services start docker-connector
 
   安装Docker端的容器`mac-docker-connector`
 ```bash
-$ docker pull origin wenjunxiao/mac-docker-connector
+$ docker pull wenjunxiao/mac-docker-connector
 ```
 
   启动Docker端的容器，其中网络必须是`host`，并且添加`NET_ADMIN`特性
 ```bash
-$ docker run -it -d --restart always --net host --cap-add NET_ADMIN --name connector mac-docker-connector
+$ docker run -it -d --restart always --net host --cap-add NET_ADMIN --name mac-connector wenjunxiao/mac-docker-connector
 ```
 
   如果你向导出你自己的容器给其他人，让其他人可以访问你在容器中搭建的服务，其他人必须安装另一个客户端[docker-accessor](./accessor)，同时你必须开启`expose`（这默认是关闭的）和提供访问的令牌(`token`)，
