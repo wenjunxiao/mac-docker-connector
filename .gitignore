@@ -15,10 +15,11 @@
 # vendor/
 
 docker/mac-receiver
-mac/docker-connector
-mac/docker-connector-*.tar.gz
-mac/options.conf
-mac/docker-connector-*-sha256.txt
+desktop/docker-connector
+desktop/docker-connector-*.tar.gz
+desktop/options.conf
+desktop/docker-connector-*-sha256.txt
+desktop/build
 accessor/build
 accessor/docker-accessor
 accessor/docker-accessor*.tar.gz

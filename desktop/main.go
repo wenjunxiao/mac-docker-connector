@@ -68,6 +68,18 @@ func runCmd(args string) error {
 	return cmd.Run()
 }
 
+func runOutCmd(args string) (string, error) {
+	argv := strings.Split(args, " ")
+	cmd := exec.Command(argv[0], argv[1:]...)
+	out, err := cmd.CombinedOutput()
+	logger.Infof("command => %s", args)
+	if out != nil {
+		outStr := string(out)
+		return outStr, err
+	}
+	return "", err
+}
+
 func checkSum(data []byte) uint16 {
 	var (
 		sum    uint32
@@ -269,10 +281,7 @@ func loadConfig(iface *water.Interface, init bool) {
 		}
 		copy([]byte(localIP), []byte(peer.To4()))
 		localIP[3]++
-		args := fmt.Sprintf("%s %s inet %s %s netmask 255.255.255.255 up", "ifconfig", iface.Name(), localIP, peer)
-		if err = runCmd(args); err != nil {
-			logger.Fatal(err)
-		}
+		setup(iface, localIP, peer)
 		for k, v := range iptables1 {
 			iptables[k] = v
 		}
@@ -282,17 +291,13 @@ func loadConfig(iface *water.Interface, init bool) {
 			routes[key] = val
 			delete(news, key)
 		} else {
-			args := fmt.Sprintf("route -n delete -net %s", key)
-			runCmd(args)
+			delRoute(key)
 		}
 	}
 	for key := range news {
 		routes[key] = news[key]
-		runCmd(fmt.Sprintf("route -n delete -net %s", key))
-		args := fmt.Sprintf("route -n add -net %s %s", key, peer)
-		if err = runCmd(args); err != nil {
-			logger.Warning(err)
-		}
+		delRoute(key)
+		addRoute(key, peer)
 	}
 	for key := range tokens {
 		if v, ok := news1[key]; ok {
@@ -432,14 +437,7 @@ func main() {
 		}
 		copy([]byte(localIP), []byte(peer.To4()))
 		localIP[3]++
-		args := fmt.Sprintf("%s %s inet %s %s netmask 255.255.255.255 up", "ifconfig", iface.Name(), localIP, peer)
-		if err = runCmd(args); err != nil {
-			logger.Fatal(err)
-		}
-	}
-	args := fmt.Sprintf("route -n add -host %s -interface %s", localIP, iface.Name())
-	if err = runCmd(args); err != nil {
-		logger.Warning(err)
+		setup(iface, localIP, peer)
 	}
 	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
