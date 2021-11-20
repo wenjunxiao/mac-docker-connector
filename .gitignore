@@ -14,12 +14,13 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-docker/mac-receiver
+docker/desktop-connector
 desktop/docker-connector
 desktop/docker-connector-*.tar.gz
 desktop/options.conf
 desktop/docker-connector-*-sha256.txt
 desktop/build
+desktop/*.zip
 accessor/build
 accessor/docker-accessor
 accessor/docker-accessor*.tar.gz

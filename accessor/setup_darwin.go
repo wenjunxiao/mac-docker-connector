@@ -26,8 +26,7 @@ func setup(ips []string) *water.Interface {
 		os.Exit(1)
 	}
 	fmt.Printf("interface => %v\n", iface.Name())
-	args := fmt.Sprintf("ifconfig %s inet %s %s netmask 255.255.255.255 up", iface.Name(), ip, peer)
-	runCmd(args)
+	runOutCmd("ifconfig %s inet %s %s netmask 255.255.255.255 up", iface.Name(), ip, peer)
 	for _, val := range ips {
 		vals := strings.Split(val, " ")
 		fmt.Printf("control => %s\n", val)
@@ -39,7 +38,7 @@ func setup(ips []string) *water.Interface {
 			} else {
 				rk := fmt.Sprintf("-net %s %s", vals[1], ip)
 				clears[fmt.Sprintf("route -n delete %s", rk)] = true
-				runCmd(fmt.Sprintf("route -n add %s", rk))
+				runCmd("route -n add %s", rk)
 			}
 		}
 	}

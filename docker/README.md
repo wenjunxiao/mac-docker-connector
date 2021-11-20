@@ -1,11 +1,11 @@
-# mac-receiver
+# desktop-connector
 
-  Connect to `docker-connector` in macOS and route the request from macOS to the container correctly.
+  Connect to `docker-connector` in `macOS`/`Windows` host and route the request from `macOS`/`Windows` host to the container correctly.
 
 ## Usage
 
 ```bash
-$ docker run -it -d --net host --cap-add NET_ADMIN --restart always --name mac-connector wenjunxiao/mac-docker-connector
+$ docker run -it -d --net host --cap-add NET_ADMIN --restart always --name desktop-connector wenjunxiao/desktop-docker-connector
 ```
 
 ## Compile
@@ -13,13 +13,13 @@ $ docker run -it -d --net host --cap-add NET_ADMIN --restart always --name mac-c
 ### Docker
 
 ```bash
-$ docker build -t mac-docker-connector .
+$ docker build -t desktop-docker-connector .
 ```
 
 ### Local
   Local compile
 ```bash
-$ GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -tags netgo -o mac-receiver main.go
+$ GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -tags netgo -o desktop-connector main.go
 ```
 
 ## Dev
@@ -38,7 +38,7 @@ $ docker commit centos-go centos-go
 $ docker run -it --cap-add NET_ADMIN -v $PWD:/workspace --workdir /workspace centos-go bash
 > # go mod init main
 > go env -w GOPROXY=https://goproxy.cn,direct
-> go build -ldflags "-s -w" -tags netgo -o mac-receiver main.go
+> go build -ldflags "-s -w" -tags netgo -o desktop-connector main.go
 > go run main.go -port 2521 -addr 192.168.252.1/24
 ```
 
@@ -54,7 +54,7 @@ $ docker buildx create --platform linux/amd64,linux/arm64/v8 --use
 
   Build and push to hub directly.
 ```bash
-$ docker buildx build --platform linux/amd64,linux/arm64/v8 -t wenjunxiao/mac-docker-connector:latest . --push
+$ docker buildx build --platform linux/amd64,linux/arm64/v8 -t wenjunxiao/desktop-docker-connector:latest . --push
 ```
   
 ### Local

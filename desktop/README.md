@@ -1,6 +1,6 @@
 # docker-connector
 
-  Accept connection from [mac-receiver](../docker) in docker, and route container's ip to it.
+  Accept connection from [desktop-connector](../docker) in docker, and route container's ip to it.
   Also can expose the access capabilities of Docker containers to others who use [docker-accessor](../accessor)
 
 ## Install
@@ -76,11 +76,22 @@ $ go build -tags netgo -o docker-connector main.go
 
 ### Release
 
-  Build and make a tarball
+  Build and make a tarball for Mac
 ```bash
-$ go build -tags netgo -o docker-connector main.go
-$ tar -czf docker-connector-darwin.tar.gz docker-connector
-$ shasum -a 256 docker-connector-darwin.tar.gz | awk '{print $1}' > docker-connector-darwin-sha256.txt
+$ go build -tags netgo -o ./build/darwin/docker-connector .
+$ tar -czf build/docker-connector-darwin.tar.gz -C ./build/darwin docker-connector
+$ shasum -a 256 build/docker-connector-darwin.tar.gz | awk '{print $1}' > build/docker-connector-darwin-sha256.txt
+```
+  Build and make a zip for Windows
+```bash
+$ GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -tags netgo -o ./build/win/x86_64/docker-connector/docker-connector.exe .
+$ cat options.conf.template > ./build/win/x86_64/docker-connector/options.conf
+$ cp tools/* ./build/win/x86_64/docker-connector/
+$ cd ./build/win/x86_64/ && zip -r docker-connector-win-x86_64.zip docker-connector && cd ../../../
+$ GOOS=windows GOARCH=386 go build -ldflags "-s -w" -tags netgo -o ./build/win/i386/docker-connector/docker-connector.exe .
+$ cat options.conf.template > ./build/win/i386/docker-connector/options.conf
+$ cp tools/* ./build/win/i386/docker-connector/
+$ cd ./build/win/i386/ && zip -r docker-connector-win-i386.zip docker-connector && cd ../../../
 ```
   Upload the tarball to [Releases](https://github.com/wenjunxiao/mac-docker-connector/releases)
 

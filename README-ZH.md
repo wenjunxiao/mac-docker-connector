@@ -1,44 +1,45 @@
 [English](https://github.com/wenjunxiao/mac-docker-connector/blob/master/README.md) | [中文简体](https://github.com/wenjunxiao/mac-docker-connector/blob/master/README-ZH.md)
 
-# mac-docker-connector
+> 把`mac-docker-connector`重命名为`desktop-docker-connector`是为了同时支持Mac和Widnwos下的Docker
+# desktop-docker-connector
 
-  `Docker for Mac` 没有提供从宿主的macOS通过容器IP访问容器的方式。参考[Known limitations, use cases, and workarounds](https://docs.docker.com/docker-for-mac/networking/#i-cannot-ping-my-containers)。通过一个[复杂解决方法](https://pjw.io/articles/2018/04/25/access-to-the-container-network-of-docker-for-mac/)得到灵感，主要方式在宿主的macOS和Docker的Hypervisor之间建立一个VPN
+  `Docker Desktop for Mac and Windows` 没有提供从宿主的macOS或Windows通过容器IP访问容器的方式。参考[Known limitations, use cases, and workarounds](https://docs.docker.com/docker-for-mac/networking/#i-cannot-ping-my-containers)。通过一个[复杂解决方法](https://pjw.io/articles/2018/04/25/access-to-the-container-network-of-docker-for-mac/)得到灵感，主要方式在宿主的macOS和Docker的Hypervisor之间建立一个VPN
 ```
-+------------+          +-----------------+
-|            |          |    Hypervisor   |
-|   macOS    |          |  +-----------+  |
-|            |          |  | Container |  |
-|            |   vpn    |  +-----------+  |
-| VPN Client |<-------->|   VPN Server    |
-+------------+          +-----------------+
++---------------+          +--------------------+
+|               |          | Hypervisor/Hyper-V |
+| macOS/Windows |          |  +-----------+     |
+|               |          |  | Container |     |
+|               |   vpn    |  +-----------+     |
+|   VPN Client  |<-------->|   VPN Server       |
++---------------+          +--------------------+
 ```
   但是宿主的macOS无法直接访问Hypervisor，VPN服务容器需要使用`host`以便与Hypervisor在同一网络环境中，必须使用一个转发容器（比如`socat`)导出端口到macOS，然后转发到VPN服务。考虑到VPN连接的双工的，因此我们可以把VPN服务和客户端反转一下，变成下面的结构
 ```
-+------------+          +-----------------+
-|            |          |    Hypervisor   |
-|   macOS    |          |  +-----------+  |
-|            |          |  | Container |  |
-|            |   vpn    |  +-----------+  |
-| VPN Server |<-------->|   VPN Client    |
-+------------+          +-----------------+
++---------------+          +--------------------+
+|               |          | Hypervisor/Hyper-V |
+| macOS/Windows |          |  +-----------+     |
+|               |          |  | Container |     |
+|               |   vpn    |  +-----------+     |
+| VPN Server    |<-------->|   VPN Client       |
++---------------+          +--------------------+
 ```
   尽管如此, 我们需要做更多额外的工作来使用openvpn，比如证书、配置等。
   这对于只是通过IP访问容器的需求来说，这些工作略显麻烦。
   我们只需要建立一个连接通道，无需证书，也可以无需客户端
 ```
-+------------+          +-----------------+
-|            |          |    Hypervisor   |
-|   macOS    |          |  +-----------+  |
-|            |          |  | Container |  |
-|            |   udp    |  +-----------+  |
-| TUN Server |<-------->|   TUN Client    |
-+------------+          +-----------------+
++---------------+          +--------------------+
+|               |          | Hypervisor/Hyper-V |
+| macOS/Windows |          |  +-----------+     |
+|               |          |  | Container |     |
+|               |   udp    |  +-----------+     |
+| TUN Server    |<-------->|   TUN Client       |
++---------------+          +--------------------+
 ```
   鉴于Docker官方文档[Docker and iptables](https://docs.docker.com/network/iptables/)中描述那样,
   两个子网之间的互通性有时也是需要的，因此还可以通过`iptables`来提供两个子网之间的互相连接
 ```
 +-------------------------------+ 
-|           Hypervisor          | 
+|      Hypervisor/Hyper-V       | 
 | +----------+     +----------+ | 
 | | subnet 1 |<--->| subnet 2 | |
 | +----------+     +----------+ |
@@ -47,6 +48,9 @@
 
 ## 使用
 
+### 宿主机
+
+#### Mac
   先安装Mac端的服务`mac-docker-connector`
 ```bash
 $ brew tap wenjunxiao/brew
@@ -67,6 +71,26 @@ $ sudo brew services start docker-connector
 ```bash
 $ docker pull wenjunxiao/mac-docker-connector
 ```
+
+#### Windows
+
+  从[Releases](https://github.com/wenjunxiao/desktop-docker-connector/releases)下载 `desktop-docker-connector`然后解压.
+
+  执行以下命令安装服务，把所有需要访问的Bridge子网地址按照`route 172.17.0.0/16`的格式写入`options.conf`
+```cmd
+$ desktop-docker-connector.exe install -config options.conf
+```
+
+  把所有需要访问的Bridge子网地址按照`route 172.17.0.0/16`的格式写入`options.conf`
+```conf
+route 172.17.0.0/16
+```
+  可以通过脚本`start-connector.bat`来直接启动连接器，或者把连接器按照以下步骤安装成服务之后启动:
+  1. 运行脚本`install-service.bat`安装服务.
+  2. 运行脚本`start-service.bat`来启动服务.
+  还可以通过运行脚本`stop-service.bat`停止服务以及运行脚本`uninstall-service.bat`卸载服务
+
+### Docker
 
   启动Docker端的容器，其中网络必须是`host`，并且添加`NET_ADMIN`特性
 ```bash

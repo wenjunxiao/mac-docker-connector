@@ -44,22 +44,22 @@ $ docker-accessor -remote 192.168.1.100:2512 -token my-token -exclude 172.1.0.0/
 
 ```bash
 $ GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -tags netgo -o ./build/win/x86_64/docker-accessor.exe .
-$ zip -j docker-accessor-win-x86_64.zip ./build/win/x86_64/docker-accessor.exe
-$ GOOS=windows GOARCH=386 go build -ldflags "-s -w" -tags netgo -o ./build/win/i686/docker-accessor.exe .
-$ zip -j docker-accessor-win-i686.zip ./build/win/i686/docker-accessor.exe
+$ zip -j build/docker-accessor-win-x86_64.zip ./build/win/x86_64/docker-accessor.exe
+$ GOOS=windows GOARCH=386 go build -ldflags "-s -w" -tags netgo -o ./build/win/i386/docker-accessor.exe .
+$ zip -j build/docker-accessor-win-i386.zip ./build/win/i386/docker-accessor.exe
 ```
 
 ### Linux
 
 ```bash
 $ GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -tags netgo -o ./build/linux/docker-accessor .
-$ tar -czf docker-accessor-linux.tar.gz -C ./build/linux docker-accessor
+$ tar -czf build/docker-accessor-linux.tar.gz -C ./build/linux docker-accessor
 ```
 
 ### MacOS
 
 ```bash
 $ GOOS=darwin go build -ldflags "-s -w" -tags netgo -o ./build/darwin/docker-accessor .
-$ tar -czf docker-accessor-darwin.tar.gz -C ./build/darwin docker-accessor
-$ shasum -a 256 docker-accessor-darwin.tar.gz | awk '{print $1}' > docker-accessor-darwin-sha256.txt
+$ tar -czf build/docker-accessor-darwin.tar.gz -C ./build/darwin docker-accessor
+$ shasum -a 256 build/docker-accessor-darwin.tar.gz | awk '{print $1}' > build/docker-accessor-darwin-sha256.txt
 ```

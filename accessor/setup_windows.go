@@ -32,8 +32,7 @@ func setup(ips []string) *water.Interface {
 		os.Exit(1)
 	}
 	fmt.Printf("interface => \"%s\"\n", iface.Name())
-	args := fmt.Sprintf("netsh interface ip set address \"%s\" static %s %s %s", iface.Name(), ip, mask, peer)
-	runCmd(args)
+	runCmd(fmt.Sprintf("netsh interface ip set address \"%s\" static %s %s %s", iface.Name(), ip, mask, peer))
 	ipStr := ip.String()
 	for {
 		if out, err := runCmd(fmt.Sprintf("netsh interface ip show addresses \"%s\"", iface.Name())); err == nil {
@@ -47,8 +46,8 @@ func setup(ips []string) *water.Interface {
 			break
 		}
 	}
-	runCmd("netsh interface ip delete dns my-tap all")
-	runCmd("netsh interface ip delete wins my-tap all")
+	runCmd("netsh interface ip delete dns \"%s\" all", iface.Name())
+	runCmd("netsh interface ip delete wins \"%s\" all", iface.Name())
 	for _, val := range ips {
 		vals := strings.Split(val, " ")
 		fmt.Printf("control => %s\n", val)

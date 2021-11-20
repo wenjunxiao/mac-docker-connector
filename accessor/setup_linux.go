@@ -26,8 +26,8 @@ func setup(ips []string) *water.Interface {
 		os.Exit(1)
 	}
 	fmt.Printf("interface => %v\n", iface.Name())
-	runOutCmd(fmt.Sprintf("%s link set dev %s up qlen 100", "ip", iface.Name()))
-	runOutCmd(fmt.Sprintf("%s addr add dev %s local %s peer %s", "ip", iface.Name(), ip, peer))
+	runCmd("%s link set dev %s up qlen 100", "ip", iface.Name())
+	runCmd("%s addr add dev %s local %s peer %s", "ip", iface.Name(), ip, peer)
 	for _, val := range ips {
 		vals := strings.Split(val, " ")
 		fmt.Printf("control => %s\n", val)
@@ -39,10 +39,10 @@ func setup(ips []string) *water.Interface {
 			} else {
 				rk := fmt.Sprintf("%s via %s dev %s", vals[1], ip, iface.Name())
 				clears[fmt.Sprintf("ip route del %s", rk)] = true
-				runCmd(fmt.Sprintf("ip route add %s", rk))
+				runCmd("ip route add %s", rk)
 			}
 		} else if vals[0] == "mtu" {
-			runOutCmd(fmt.Sprintf("%s link set dev %s mtu %s", "ip", iface.Name(), vals[1]))
+			runCmd("%s link set dev %s mtu %s", "ip", iface.Name(), vals[1])
 		}
 	}
 

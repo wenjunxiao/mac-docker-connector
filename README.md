@@ -1,48 +1,49 @@
 [English](https://github.com/wenjunxiao/mac-docker-connector/blob/master/README.md) | [中文简体](https://github.com/wenjunxiao/mac-docker-connector/blob/master/README-ZH.md)
 
-# mac-docker-connector
+> Change mac-docker-connector to desktop-docker-connector to support both Docker Desktop for Mac and Docker Desktop for Windows
+# desktop-docker-connector
 
-  `Docker for Mac` does not provide access to container IP from macOS host. 
+  `Docker Desktop for Mac and Windows` does not provide access to container IP from host(macOS or Windows). 
   Reference [Known limitations, use cases, and workarounds](https://docs.docker.com/docker-for-mac/networking/#i-cannot-ping-my-containers). 
   There is a [complex solution](https://pjw.io/articles/2018/04/25/access-to-the-container-network-of-docker-for-mac/),
-  which is also my source of inspiration. The main idea is to build a VPN between the macOS host and the docker virtual machine.
+  which is also my source of inspiration. The main idea is to build a VPN between the macOS/Windows host and the docker virtual machine.
 ```
-+------------+          +-----------------+
-|            |          |    Hypervisor   |
-|   macOS    |          |  +-----------+  |
-|            |          |  | Container |  |
-|            |   vpn    |  +-----------+  |
-| VPN Client |<-------->|   VPN Server    |
-+------------+          +-----------------+
++---------------+          +--------------------+
+|               |          | Hypervisor/Hyper-V |
+| macOS/Windows |          |  +-----------+     |
+|               |          |  | Container |     |
+|               |   vpn    |  +-----------+     |
+|   VPN Client  |<-------->|   VPN Server       |
++---------------+          +--------------------+
 ```
-  But the macOS host cannot access the container, the vpn port must be exported and forwarded.
+  But the macOS/Windows host cannot access the container, the vpn port must be exported and forwarded.
   Since the VPN connection is duplex, so we can reverse it.
 ```
-+------------+          +-----------------+
-|            |          |    Hypervisor   |
-|   macOS    |          |  +-----------+  |
-|            |          |  | Container |  |
-|            |   vpn    |  +-----------+  |
-| VPN Server |<-------->|   VPN Client    |
-+------------+          +-----------------+
++---------------+          +--------------------+
+|               |          | Hypervisor/Hyper-V |
+| macOS/Windows |          |  +-----------+     |
+|               |          |  | Container |     |
+|               |   vpn    |  +-----------+     |
+| VPN Server    |<-------->|   VPN Client       |
++---------------+          +--------------------+
 ```
   Even so, we need to do more extra work to use openvpn, such as certificates, configuration, etc.
   All I want is to access the container via IP, why is it so cumbersome. 
   No need for security, multi-clients, or certificates, just connect.
 ```
-+------------+          +-----------------+
-|            |          |    Hypervisor   |
-|   macOS    |          |  +-----------+  |
-|            |          |  | Container |  |
-|            |   udp    |  +-----------+  |
-| TUN Server |<-------->|   TUN Client    |
-+------------+          +-----------------+
++---------------+          +--------------------+
+|               |          | Hypervisor/Hyper-V |
+| macOS/Windows |          |  +-----------+     |
+|               |          |  | Container |     |
+|               |   udp    |  +-----------+     |
+| TUN Server    |<-------->|   TUN Client       |
++---------------+          +--------------------+
 ```
   In the view of [Docker and iptables](https://docs.docker.com/network/iptables/), 
   this tool also provides the ability of two subnets to access each other.
 ```
 +-------------------------------+ 
-|           Hypervisor          | 
+|      Hypervisor/Hyper-V       | 
 | +----------+     +----------+ | 
 | | subnet 1 |<--->| subnet 2 | |
 | +----------+     +----------+ |
@@ -51,7 +52,10 @@
 
 ## Usage
 
-  Install mac client of mac-docker-connector.
+### Host
+#### MacOS
+
+  Install mac client of `desktop-docker-connector`.
 ```bash
 $ brew tap wenjunxiao/brew
 $ brew install docker-connector
@@ -67,15 +71,31 @@ $ docker network ls --filter driver=bridge --format "{{.ID}}" | xargs docker net
 $ sudo brew services start docker-connector
 ```
 
-  Install docker front of `mac-docker-connector`
+#### Windows
+
+  Download windows client of `desktop-docker-connector` from [Releases](https://github.com/wenjunxiao/desktop-docker-connector/releases), and then unzip it.
+
+  Append bridge network to `options.conf`, format like `route 172.17.0.0/16`.
+```conf
+route 172.17.0.0/16
+```
+  Run directly by bat `start-connector.bat` or install as service by follow step:
+  1. Run the bat `install-service.bat` to install as windows service.
+  2. Run the bat `start-service.bat` to start the connector service.
+  And finally, you can  run the bat `stop-service.bat` to stop the connector service, 
+  run the bat `uninstall-service.bat` to uninstall the connector service.
+  
+### Docker
+
+  Install docker front of `desktop-docker-connector`
 ```bash
-$ docker pull wenjunxiao/mac-docker-connector
+$ docker pull wenjunxiao/desktop-docker-connector
 ```
 
   Start the docker front. The network must be `host`, and add `NET_ADMIN` capability.
 
 ```bash
-$ docker run -it -d --restart always --net host --cap-add NET_ADMIN --name mac-connector wenjunxiao/mac-docker-connector
+$ docker run -it -d --restart always --net host --cap-add NET_ADMIN --name desktop-connector wenjunxiao/desktop-docker-connector
 ```
 
   If you want to expose the containers of docker to other pepole, Please reference [docker-accessor](./accessor)
@@ -83,7 +103,7 @@ $ docker run -it -d --restart always --net host --cap-add NET_ADMIN --name mac-c
 ## Configuration
 
   Basic configuration items, do not need to modify these, unless your environment conflicts,
-  if necessary, then the docker container `mac-docker-connector` also needs to be started with the same parameters
+  if necessary, then the docker container `desktop-docker-connector` also needs to be started with the same parameters
 * `addr` virtual network address, default `192.168.251.1/24` (change if it conflict)
   ```
   addr 192.168.251.1/24
@@ -96,7 +116,7 @@ $ docker run -it -d --restart always --net host --cap-add NET_ADMIN --name mac-c
   ```
   mtu 1400
   ```
-* `host` udp listen host, used to be connected by mac-docker-connector, default `127.0.0.1` for security and adaptation
+* `host` udp listen host, used to be connected by `desktop-docker-connector`, default `127.0.0.1` for security and adaptation
   ```
   host 127.0.0.1
   ```

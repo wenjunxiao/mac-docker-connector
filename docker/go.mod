@@ -1,4 +1,4 @@
-module mac-receiver
+module desktop-connector
 
 go 1.13
 

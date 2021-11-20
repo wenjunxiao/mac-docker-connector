@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/songgao/water"
@@ -44,12 +45,12 @@ func _runCmd(args string, output bool) (string, error) {
 	return "", err
 }
 
-func runCmd(args string) (string, error) {
-	return _runCmd(args, false)
+func runCmd(format string, a ...interface{}) (string, error) {
+	return _runCmd(fmt.Sprintf(format, a...), false)
 }
 
-func runOutCmd(args string) (string, error) {
-	return _runCmd(args, true)
+func runOutCmd(format string, a ...interface{}) (string, error) {
+	return _runCmd(fmt.Sprintf(format, a...), true)
 }
 
 func main() {
@@ -138,8 +139,8 @@ func main() {
 			}
 		}
 	}()
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, os.Kill)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	s := <-c
 	fmt.Println("exit signal =>", s)
 	exiting = true

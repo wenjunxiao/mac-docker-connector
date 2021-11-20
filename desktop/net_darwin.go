@@ -1,31 +1,37 @@
 package main
 
 import (
-	"fmt"
 	"net"
 
 	"github.com/songgao/water"
 )
 
-func setup(iface *water.Interface, local, peer net.IP) {
-	args := fmt.Sprintf("%s %s inet %s %s netmask 255.255.255.255 up", "ifconfig", iface.Name(), local, peer)
-	if err := runCmd(args); err != nil {
+func setup(local, peer net.IP, subnet *net.IPNet) *water.Interface {
+	config := water.Config{
+		DeviceType: water.TUN,
+	}
+	iface, err := water.New(config)
+	if err != nil {
 		logger.Fatal(err)
 	}
-	args = fmt.Sprintf("route -n add -host %s -interface %s", local, iface.Name())
-	if err := runCmd(args); err != nil {
+	logger.Infof("interface => %s\n", iface.Name())
+	if out, err := runOutCmd("%s %s inet %s %s netmask 255.255.255.255 up", "ifconfig", iface.Name(), local, peer); err != nil {
+		logger.Warningf("%s\n", out)
+		logger.Fatal(err)
+	}
+	if err := runCmd("route -n add -host %s -interface %s", local, iface.Name()); err != nil {
 		logger.Warning(err)
 	}
 	logger.Info("drawin setup done.")
+	return iface
 }
 
 func addRoute(key string, peer net.IP) {
-	args := fmt.Sprintf("route -n add -net %s %s", key, peer)
-	if err := runCmd(args); err != nil {
+	if err := runCmd("route -n add -net %s %s", key, peer); err != nil {
 		logger.Warning(err)
 	}
 }
 
 func delRoute(key string) {
-	runCmd(fmt.Sprintf("route -n delete -net %s", key))
+	runCmd("route -n delete -net %s", key)
 }
