@@ -73,6 +73,9 @@ $ sudo brew services start docker-connector
 
 #### Windows
 
+  Need to install tap driver [tap-windows](http://build.openvpn.net/downloads/releases/) from [OpenVPN](https://community.openvpn.net/openvpn/wiki/ManagingWindowsTAPDrivers).
+  Download the latest version `http://build.openvpn.net/downloads/releases/latest/tap-windows-latest-stable.exe` and install.
+  
   Download windows client of `desktop-docker-connector` from [Releases](https://github.com/wenjunxiao/desktop-docker-connector/releases), and then unzip it.
 
   Append bridge network to `options.conf`, format like `route 172.17.0.0/16`.
