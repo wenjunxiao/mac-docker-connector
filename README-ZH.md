@@ -59,7 +59,7 @@ $ brew install docker-connector
 
   首次配置通过以下命令把所有Docker所有`bridge`子网放入配置文件，后续的增减可以参考后面的详细配置
 ```bash
-$ docker network ls --filter driver=bridge --format "{{.ID}}" | xargs docker network inspect --format "route {{range .IPAM.Config}}{{.Subnet}}{{end}}" >> /usr/local/etc/docker-connector.conf
+$ docker network ls --filter driver=bridge --format "{{.ID}}" | xargs docker network inspect --format "route {{range .IPAM.Config}}{{.Subnet}}{{end}}" >> "$(brew --prefix)/etc/docker-connector.conf"
 ```
 
   启动Mac端的服务
