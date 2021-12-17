@@ -25,11 +25,11 @@ $ sudo brew services start docker-connector
   and you can add or delete later.
   You can add all bridge subnet by `docker network ls --filter driver=bridge`
 ```bash
-$ docker network ls --filter driver=bridge --format "{{.ID}}" | xargs docker network inspect --format "route {{range .IPAM.Config}}{{.Subnet}}{{end}}" >> /usr/local/etc/docker-connector.conf
+$ docker network ls --filter driver=bridge --format "{{.ID}}" | xargs docker network inspect --format "route {{range .IPAM.Config}}{{.Subnet}}{{end}}" >> "$(brew --prefix)/etc/docker-connector.conf"
 ```
   Or just add specified subnet route you like
 ```bash
-$ cat <<EOF >> /usr/local/etc/docker-connector.conf
+$ cat <<EOF >> "$(brew --prefix)/etc/docker-connector.conf"
 route 172.100.0.0/16
 EOF
 ```
@@ -37,7 +37,7 @@ EOF
   Start with the specified configuration file
 ```bash
 $ sudo ls # cache sudo password
-$ nohup sudo ./docker-connector -config /usr/local/etc/docker-connector.conf &
+$ nohup sudo ./docker-connector -config "$(brew --prefix)/etc/docker-connector.conf" &
 ```
 
 ### Expose access
@@ -45,7 +45,7 @@ $ nohup sudo ./docker-connector -config /usr/local/etc/docker-connector.conf &
   You can expose the containers to others, so that they can access the network you built in docker.
   Add expose listen address and access tokens.
 ```bash
-$ cat <<EOF >> /usr/local/etc/docker-connector.conf
+$ cat <<EOF >> "$(brew --prefix)/etc/docker-connector.conf"
 expose 0.0.0.0:2512
 token user1 192.168.251.3
 token user2 192.168.251.4
@@ -58,7 +58,7 @@ route 172.100.0.0/16 expose
 
   For test, you can turn on `pong` to intercept ping requests(only IPv4)
 ```bash
-$ cat <<EOF >> /usr/local/etc/docker-connector.conf
+$ cat <<EOF >> "$(brew --prefix)/etc/docker-connector.conf"
 pong on
 EOF
 ```

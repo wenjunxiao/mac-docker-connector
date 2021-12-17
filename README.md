@@ -63,7 +63,7 @@ $ brew install docker-connector
 
   Config route of docker network
 ```bash
-$ docker network ls --filter driver=bridge --format "{{.ID}}" | xargs docker network inspect --format "route {{range .IPAM.Config}}{{.Subnet}}{{end}}" >> /usr/local/etc/docker-connector.conf
+$ docker network ls --filter driver=bridge --format "{{.ID}}" | xargs docker network inspect --format "route {{range .IPAM.Config}}{{.Subnet}}{{end}}" >> "$(brew --prefix)/etc/docker-connector.conf"
 ```
 
   Start the service
@@ -126,7 +126,7 @@ $ docker run -it -d --restart always --net host --cap-add NET_ADMIN --name deskt
 
   Dynamic hot-loading configuration items can take effect without restarting,
   and need to be added or modified according to your needs.
-* `route` Add a route to access the docker container subnet, usually when you create a bridge network by `docker network create --subnet 172.56.72.0/24 app`, run `echo "route 172.56.72.0/24" >> /usr/local/etc/docker-connector.conf` to append route to config file.
+* `route` Add a route to access the docker container subnet, usually when you create a bridge network by `docker network create --subnet 172.56.72.0/24 app`, run `echo "route 172.56.72.0/24" >> "$(brew --prefix)/etc/docker-connector.conf"` to append route to config file.
   ```
   route 172.56.72.0/24
   ```
