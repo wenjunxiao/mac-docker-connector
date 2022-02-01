@@ -221,7 +221,7 @@ func (c *Connector) run() {
 						if cliAddr == "" {
 							ioutil.WriteFile(TmpPeer, []byte(lastCli), 0644)
 						}
-						sendIptable(cli, iptables)
+						sendControls(cli, iptables, hosts)
 					}
 				} else if data[0] == 1 && n > 1 {
 					appendConfig(data[1:n])
@@ -251,8 +251,8 @@ func toIntIP(packet []byte, offset0 int, offset1 int, offset2 int, offset3 int) 
 	return sum
 }
 
-func sendIptable(cli *net.UDPAddr, tables map[string]bool) {
-	logger.Infof("send iptables => %v %v\n", cli, tables)
+func sendControls(cli *net.UDPAddr, tables map[string]bool, hosts string) {
+	logger.Infof("send controls => %v %v %v\n", cli, tables, hosts)
 	var reply bytes.Buffer
 	for k, v := range tables {
 		if reply.Len() > 0 {
@@ -265,13 +265,14 @@ func sendIptable(cli *net.UDPAddr, tables map[string]bool) {
 		}
 		reply.WriteString(k)
 	}
+	loadHosts(&reply, hosts)
 	l := reply.Len()
+	if l < 50 {
+		logger.Infof("reply client => %s %d %s\n", cli, l, reply.String())
+	} else {
+		logger.Infof("reply client => %s %d\n", cli, l)
+	}
 	if l > 0 {
-		if l < 50 {
-			logger.Infof("reply client => %s %d %s\n", cli, l, reply.String())
-		} else {
-			logger.Infof("reply client => %s %d\n", cli, l)
-		}
 		l16 := uint16(l)
 		header := make([]byte, 3)
 		header[0] = 1

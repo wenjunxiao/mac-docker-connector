@@ -151,3 +151,13 @@ $ docker run -it -d --restart always --net host --cap-add NET_ADMIN --name deskt
   ```
   The token name is customized and unique, and the IP must be valid in the virtual network
   defined by `addr`  
+* `hosts` allows the custom domain with ip `127.0.0.1`, also can be used in the container
+   ````
+   hosts /etc/hosts .local .inc
+   ````
+   The first parameter is the hosts file, and the subsequent parameters are the filtered domain name suffix
+* `proxy` allows services that listen locally on `127.0.0.1` to be accessed by the container
+   ````
+   proxy 127.0.0.1:80:80
+   ````
+   The first part `127.0.0.1:80` is the address where the local service listens, and the port `80` in the latter part is the port where the proxy listens

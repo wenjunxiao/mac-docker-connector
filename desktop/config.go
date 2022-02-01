@@ -41,6 +41,9 @@ func loadConfig(iface *water.Interface, init bool) *water.Interface {
 	news := make(map[string]bool)
 	news1 := make(map[string]string)
 	iptables1 := make(map[string]bool)
+	if proxyServer != nil {
+		proxyServer.StartClear()
+	}
 	br := bufio.NewReader(fi)
 	for {
 		a, _, c := br.ReadLine()
@@ -114,6 +117,10 @@ func loadConfig(iface *water.Interface, init bool) *water.Interface {
 					val = fmt.Sprintf("%s %s", vals[1], vals[0])
 				}
 				iptables1[val] = join
+			case "hosts":
+				hosts = val
+			case "proxy":
+				GetProxyServer().Add(val)
 			default:
 				logger.Warningf("unknown action => %s\n", match[1])
 			}
@@ -133,6 +140,10 @@ func loadConfig(iface *water.Interface, init bool) *water.Interface {
 		for k, v := range iptables1 {
 			iptables[k] = v
 		}
+	}
+	if proxyServer != nil {
+		proxyServer.EndClear()
+		proxyServer.Start(localIP)
 	}
 	logger.Debugf("routes %s => %s\n", map2json(routes), map2json(news))
 	for key := range routes {
@@ -172,8 +183,8 @@ func loadConfig(iface *water.Interface, init bool) *water.Interface {
 			iptables1[key] = false
 		}
 	}
-	if cli != nil && len(iptables1) > 0 {
-		sendIptable(cli, iptables1)
+	if cli != nil {
+		sendControls(cli, iptables1, hosts)
 	}
 	news = nil
 	news1 = nil
@@ -235,5 +246,69 @@ func sendConfig() {
 func clearRoutes() {
 	for key := range routes {
 		delRoute(key)
+	}
+}
+
+func loadHosts(buf *bytes.Buffer, hosts string) {
+	if hosts == "" {
+		return
+	}
+	re := regexp.MustCompile(`^\s*(".*"|\S*)\s+((?:[\w.+-]+\s*){1,})$`)
+	match := re.FindStringSubmatch(hosts)
+	if match == nil {
+		logger.Warningf("invalid hosts config: %v\n", hosts)
+		return
+	}
+	fi, err := os.Open(match[1])
+	if err != nil {
+		logger.Warningf("invalid hosts file: %v\n", match[1])
+		return
+	}
+	defer fi.Close()
+	dns := match[2]
+	if buf.Len() > 0 {
+		buf.WriteString(",")
+	}
+	buf.WriteString("dns ")
+	buf.WriteString(dns)
+	domain_arr := strings.Split(strings.TrimSpace(regexp.MustCompile(`\s+`).ReplaceAllString(dns, " ")), " ")
+	domain_match := func(s string) bool {
+		for _, val := range domain_arr {
+			for _, d := range strings.Split(s, " ") {
+				if strings.HasSuffix(d, val) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	re = regexp.MustCompile(`^\s*(\d+[\d.]+)\s+([^#]+)\s*(#.*)?$`)
+	br := bufio.NewReader(fi)
+	for {
+		a, _, c := br.ReadLine()
+		if c == io.EOF {
+			break
+		}
+		s := string(a)
+		match := re.FindStringSubmatch(s)
+		if match != nil {
+			if strings.Contains(match[3], "docker-connector:ignore") {
+				continue
+			}
+			if !domain_match(match[2]) && !strings.Contains(match[3], "docker-connector:resolve") {
+				continue
+			}
+			if buf.Len() > 0 {
+				buf.WriteString(",")
+			}
+			buf.WriteString("host ")
+			if match[1] == "127.0.0.1" {
+				buf.WriteString(localIP.String())
+			} else {
+				buf.WriteString(match[1])
+			}
+			buf.WriteString(" ")
+			buf.WriteString(match[2])
+		}
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"net"
@@ -22,6 +23,7 @@ var (
 	heartbeat         = 5000
 	iptablesInstalled = false
 	chain             = "DOCKER-USER"
+	dnsSvr            *DNSServer
 )
 
 func init() {
@@ -68,7 +70,10 @@ func installIptables() {
 		}
 	}
 }
+
 func iptables(a, i, o string) error {
+	// iptables -I DOCKER-USER -i br-net1 -o br-net2 -j ACCEPT
+	// iptables -I DOCKER-USER -i br-net2 -o br-net1 -j ACCEPT
 	if !iptablesInstalled {
 		installIptables()
 		iptablesInstalled = true
@@ -78,8 +83,59 @@ func iptables(a, i, o string) error {
 	return cmd.Run()
 }
 
-func applyControls(cmds []string) {
+// domain dot `.` in dns query is replaced by the length of next domain part
+// such as `www.example.com` is converted to `www\x07example\x03com`
+// use iptable hex-string, the content is `www|07|example|03|com|`
+func hexDomain(s string) string {
+	vals := strings.Split(s, ".")
+	if len(vals) == 1 {
+		return s
+	}
+	var buf bytes.Buffer
+	if len(vals[0]) > 0 {
+		buf.WriteString(vals[0])
+	}
+	buf.WriteString("|")
+	for i := 1; i < len(vals); i++ {
+		buf.WriteString(fmt.Sprintf("%02x", len(vals[i])))
+		buf.WriteString("|")
+		buf.WriteString(vals[i])
+		buf.WriteString("|")
+	}
+	return buf.String()
+}
+
+// rediect the dns query of the domain to specified ip
+// iptables -t nat -L PREROUTING -vn --line-number
+func rediectDns(domains []string, ip net.IP) error {
+	if !iptablesInstalled {
+		installIptables()
+		iptablesInstalled = true
+	}
+	for _, domain := range domains {
+		act := "-I"
+		if domain[0] == '-' {
+			domain = domain[1:]
+			act = "-D"
+		} else {
+			argv := []string{"iptables", "-t", "nat", "-D", "PREROUTING", "-p", "udp", "--dport", "53",
+				"-m", "string", "--algo", "bm", "--hex-string", hexDomain(domain), "-j", "DNAT", "--to-destination", ip.String(),
+			}
+			fmt.Printf("clear dns => %v %v\n", strings.Join(argv, " "), exec.Command(argv[0], argv[1:]...).Run())
+		}
+		argv := []string{"iptables", "-t", "nat", act, "PREROUTING", "-p", "udp", "--dport", "53",
+			"-m", "string", "--algo", "bm", "--hex-string", hexDomain(domain), "-j", "DNAT", "--to-destination", ip.String(),
+		}
+		fmt.Printf("dns command => %s %v\n", strings.Join(argv, " "), exec.Command(argv[0], argv[1:]...).Run())
+	}
+	return nil
+}
+
+func applyControls(cmds []string, ip net.IP) {
 	routes := getRoutes()
+	if dnsSvr != nil {
+		dnsSvr.StartClear()
+	}
 	for _, val := range cmds {
 		vals := strings.Split(val, " ")
 		fmt.Printf("control => %s\n", val)
@@ -100,7 +156,18 @@ func applyControls(cmds []string) {
 				iptables("-D", i1, i2)
 				iptables("-D", i2, i1)
 			}
+		case "dns":
+			rediectDns(vals[1:], ip)
+		case "host":
+			if dnsSvr == nil {
+				dnsSvr = NewDnsServer()
+			}
+			dnsSvr.Add(strings.Join(vals[1:], " "))
 		}
+	}
+	if dnsSvr != nil {
+		dnsSvr.EndClear()
+		dnsSvr.Start(ip)
 	}
 }
 
@@ -224,7 +291,7 @@ func main() {
 					pos += n
 				}
 				if l > 0 {
-					applyControls(strings.Split(string(buf), ","))
+					applyControls(strings.Split(string(buf), ","), ip)
 				}
 			} else {
 				fmt.Printf("tun write error: %v\n", err)

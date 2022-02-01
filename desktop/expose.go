@@ -52,7 +52,7 @@ func handleExpose() {
 						}
 					}
 				} else if data[0]&0xf0 == 0x60 { // IPv6
-					// not supported
+					logger.Debugf("not supported")
 				}
 			}
 			if _, err := conn.WriteToUDP(data[:n], cli); err != nil {

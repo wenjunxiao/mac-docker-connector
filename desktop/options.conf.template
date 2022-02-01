@@ -10,3 +10,6 @@
 # token mac 192.168.251.4
 # iptables 172.63.79.0+172.21.81.0
 # iptables 172.21.81.0-172.63.79.0
+# hosts C:\Windows\System32\drivers\etc\hosts local
+# hosts /etc/hosts local
+# proxy 127.0.0.1:80

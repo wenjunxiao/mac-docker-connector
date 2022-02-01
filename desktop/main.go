@@ -40,6 +40,7 @@ var (
 	bind           = true
 	logfile        = ""
 	leveledBackend logging.LeveledBackend
+	hosts      	   = ""
 )
 
 func init() {

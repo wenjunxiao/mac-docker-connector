@@ -63,11 +63,38 @@ pong on
 EOF
 ```
 
+### Hosts
+
+  A simple DNS server for docker containers, which use the hosts file and filtered by domain suffix,
+  such as `.local`
+```conf
+hosts /etc/hosts .local .local1
+```
+  It will usefull for a domain with ip `127.0.0.1`, which will be resolved as another avaliable ip for container, such as `192.168.251.2`. So, you can use any custom domain (`/etc/hosts` for Mac or `C:\Windows\System32\drivers\etc\hosts` for Windows) both in host and conatiner, 
+```conf
+127.0.0.1 api.example.local
+```
+  You can use comment to force ignore (`docker-connector:ignore`) or include (`docker-connector:resolve`) the entry.
+
+```conf
+127.0.0.1 ignore.example.local # docker-connector:ignore
+127.0.0.1 api.example.resolve # docker-connector:resolve
+```
+
+### Proxy
+
+  A simple proxy server for a tcp service with host `127.0.0.1`. It will be usefull for a service,
+  which is only accessible by the host and the container
+```conf
+proxy 127.0.0.1:80:80
+```
+  The first part `host:port` is the service listening, and the last port `80` is the proxy listening.
+
 ## Compile
 
 ```bash
 $ go env -w GOPROXY=https://goproxy.cn,direct
-$ go build -tags netgo -o docker-connector main.go
+$ go build -tags netgo -o docker-connector .
 ```
 
 ## Publish

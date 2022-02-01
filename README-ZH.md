@@ -142,3 +142,13 @@ $ docker run -it -d --restart always --net host --cap-add NET_ADMIN --name mac-c
   token token-name 192.168.251.3
   ```
   令牌是自定义的字符串，并且在配置文件中唯一，IP则必须是`addr`配置的虚拟网络中有效的IP
+* `hosts` 让本地自定义`127.0.0.1`对应的域名也可以在容器中使用
+  ```
+  hosts /etc/hosts .local .inc
+  ```
+  第一个参数是hosts文件，后续的参数是过滤的域名后缀
+* `proxy` 让本地监听`127.0.0.1`的服务也可以被容器访问
+  ```
+  proxy 127.0.0.1:80:80
+  ```
+  第一部分`127.0.0.1:80`是本地服务监听的地址，后面部分的端口`80`是代理监听的端口
