@@ -19,7 +19,7 @@ $ docker build -t desktop-docker-connector .
 ### Local
   Local compile
 ```bash
-$ GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -tags netgo -o desktop-connector main.go
+$ GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -tags netgo -o desktop-connector .
 ```
 
 ## Dev
@@ -117,10 +117,7 @@ build on linux/amd64, build for linux/arm64
 
 ## Advance
 
-  Advanced feature depends on `iptables` tool, which will be installed automatically when need,
-  If the installation fails, please enter the container to install manually.
-  All rules of `iptables` will be cleared after restart, but the connector will set all the rules
-  from [desktop](../desktop) after restart.
+  Advanced feature depends on `iptables` tool. But all rules of `iptables` will be cleared after restart, so the connector will set all the rules from [desktop](../desktop) after restart.
   
 ### Connect Two Subnet
   Two sub bridge net created by follow command

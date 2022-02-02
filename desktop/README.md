@@ -112,11 +112,11 @@ $ shasum -a 256 build/docker-connector-darwin.tar.gz | awk '{print $1}' > build/
   Build and make a zip for Windows
 ```bash
 $ GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -tags netgo -o ./build/win/x86_64/docker-connector/docker-connector.exe .
-$ cat options.conf.template > ./build/win/x86_64/docker-connector/options.conf
+$ cat options.conf.template > ./build/win/x86_64/docker-connector/options.conf.sample
 $ cp tools/* ./build/win/x86_64/docker-connector/
 $ cd ./build/win/x86_64/ && zip -r docker-connector-win-x86_64.zip docker-connector && cd ../../../
 $ GOOS=windows GOARCH=386 go build -ldflags "-s -w" -tags netgo -o ./build/win/i386/docker-connector/docker-connector.exe .
-$ cat options.conf.template > ./build/win/i386/docker-connector/options.conf
+$ cat options.conf.template > ./build/win/i386/docker-connector/options.conf.sample
 $ cp tools/* ./build/win/i386/docker-connector/
 $ cd ./build/win/i386/ && zip -r docker-connector-win-i386.zip docker-connector && cd ../../../
 ```

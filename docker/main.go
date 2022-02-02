@@ -15,15 +15,14 @@ import (
 
 var (
 	// MTU maximum transmission unit
-	MTU               = 1400
-	debug             = false
-	host              = "host.docker.internal"
-	port              = 2511
-	addr              = "192.168.251.1/24"
-	heartbeat         = 5000
-	iptablesInstalled = false
-	chain             = "DOCKER-USER"
-	dnsSvr            *DNSServer
+	MTU       = 1400
+	debug     = false
+	host      = "host.docker.internal"
+	port      = 2511
+	addr      = "192.168.251.1/24"
+	heartbeat = 5000
+	chain     = "DOCKER-USER"
+	dnsSvr    *DNSServer
 )
 
 func init() {
@@ -59,25 +58,9 @@ func getRoutes() map[string]string {
 	return routes
 }
 
-func installIptables() {
-	// iptables -L DOCKER-USER -vn --line-number
-	if exec.Command("iptables", "-L", chain, "-vn", "--line-number").Run() != nil {
-		fmt.Printf("iptables installing...\n")
-		if err := exec.Command("apk", "add", "iptables").Run(); err != nil {
-			fmt.Printf("iptables install failed => %v\n", err)
-		} else {
-			fmt.Printf("iptables installed\n")
-		}
-	}
-}
-
 func iptables(a, i, o string) error {
 	// iptables -I DOCKER-USER -i br-net1 -o br-net2 -j ACCEPT
 	// iptables -I DOCKER-USER -i br-net2 -o br-net1 -j ACCEPT
-	if !iptablesInstalled {
-		installIptables()
-		iptablesInstalled = true
-	}
 	fmt.Printf("iptables %s %s -i %s -o %s\n", a, chain, i, o)
 	cmd := exec.Command("iptables", a, chain, "-i", i, "-o", o, "-j", "ACCEPT")
 	return cmd.Run()
@@ -108,10 +91,6 @@ func hexDomain(s string) string {
 // rediect the dns query of the domain to specified ip
 // iptables -t nat -L PREROUTING -vn --line-number
 func rediectDns(domains []string, ip net.IP) error {
-	if !iptablesInstalled {
-		installIptables()
-		iptablesInstalled = true
-	}
 	for _, domain := range domains {
 		act := "-I"
 		if domain[0] == '-' {
