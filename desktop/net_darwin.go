@@ -19,6 +19,7 @@ func setup(local, peer net.IP, subnet *net.IPNet) *water.Interface {
 		logger.Warningf("%s\n", out)
 		logger.Fatal(err)
 	}
+	runCmd("ifconfig %s mtu %d", iface.Name(), MTU)
 	if err := runCmd("route -n add -host %s -interface %s", local, iface.Name()); err != nil {
 		logger.Warning(err)
 	}

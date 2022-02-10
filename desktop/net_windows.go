@@ -41,6 +41,8 @@ func setup(local, peer net.IP, subnet *net.IPNet) *water.Interface {
 			break
 		}
 	}
+	// netsh interface ipv4 show subinterfaces
+	runCmd("netsh interface ipv4 set subinterface \"%s\" mtu=%d store=persistent", iface.Name(), MTU)
 	runCmd("netsh interface ip delete dns \"%s\" all", iface.Name())
 	runCmd("netsh interface ip delete wins \"%s\" all", iface.Name())
 	return iface
