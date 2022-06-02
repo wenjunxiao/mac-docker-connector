@@ -200,3 +200,26 @@ $ iptables -t nat -L PREROUTING -vn --line-number
 ```bash
 $ iptables -t nat -D PREROUTING <num>
 ```
+
+### Multi-Subnet
+
+If a container has more than one subnet, which is added by `docker network connect`, you need to specify `rt_table` for each subnet (Please install `iproute2` in you container).
+```bash
+$ ip rule add from <interface_IP> table <rt_table> prio 1
+$ ip route add default via <gateway_IP> dev <interface> table <rt_table>
+```
+For example, add two `rt_table`
+```bash
+$ echo "201   rt1" >> /etc/iproute2/rt_tables
+$ echo "202   rt2" >> /etc/iproute2/rt_tables
+```
+and then specify `rt_table` for two subnet `172.100.0.1/16` and `172.17.0.1/16`
+```bash
+# specify for 172.100.0.1/16
+$ ip route add default via 172.100.0.1 dev `ip addr show | grep 172.100.0 | awk '{print $NF}'` table rt1
+$ ip rule add from `ip addr show | grep 172.100.0 | awk '{print $2}' | awk -F/ '{print $1}'` table rt1 prio 1
+# specify for 172.17.0.0/16
+$ ip route add default via 172.17.0.1 dev `ip addr show | grep 172.17.0 | awk '{print $NF}'` table rt2
+$ ip rule add from `ip addr show | grep 172.17.0 | awk '{print $2}' | awk -F/ '{print $1}'` table rt2 prio 1
+```
+
